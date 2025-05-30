@@ -52,6 +52,3 @@ go build -o subov88r subov88r.go
 ```
 
 The tool is used automatically by the main autoAr.sh script for Azure takeover checks, but you can run it manually for custom lists.
-
----
-![image](https://github.com/user-attachments/assets/4af3a969-a2e2-4b80-9856-e1789035e2e9)
