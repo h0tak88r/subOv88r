@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -23,11 +22,13 @@ const (
 func main() {
 	// Parse command-line arguments
 	filepath := flag.String("f", "", "Path to the subdomains file")
+	azureOnly := flag.Bool("asto", false, "Only check for Azure subdomain takeover")
+	noColor := flag.Bool("nc", false, "Disable colored output")
 	flag.Parse()
 
 	// Check for provided subdomains file
 	if *filepath == "" {
-		fmt.Println("Usage: subov88r -f subdomains.txt")
+		fmt.Println("Usage: subov88r -f subdomains.txt [-asto] [-nc]")
 		os.Exit(88)
 	}
 
@@ -47,6 +48,11 @@ func main() {
 		// Get the CNAME record for the subdomain
 		cname, _ := net.LookupCNAME(subdomain)
 
+		// Skip if CNAME is empty
+		if cname == "" {
+			continue
+		}
+
 		// Get the status of the subdomain
 		status, err := getStatus(subdomain)
 		if err != nil {
@@ -57,11 +63,25 @@ func main() {
 		isVuln := azureSTO(cname, status)
 
 		if isVuln {
-			fmt.Printf("[%v, %v, %v] Possiply Vulnerable to subdomain takeover vulnerability", subdomain, cname, status)
+			if *noColor {
+				fmt.Printf("[VULNERABLE] [SUBDOMAIN:%s] [CNAME:%s] [STATUS:%s]\n", subdomain, cname, status)
+			} else {
+				fmt.Printf("%s[VULNERABLE]%s [SUBDOMAIN:%s%s%s] [CNAME:%s%s%s] [STATUS:%s%s%s]\n",
+					Red, NC, Red, subdomain, NC, Blue, cname, NC, Green, status, NC)
+			}
+			continue
 		}
 
-		// Print results with ANSI colors
-		fmt.Printf("%sSubdomain: %s %s, %sCNAME: %s %s, %sStatus: %s%s\n", Red, subdomain, NC, Blue, cname, NC, Green, status, NC)
+		// Print results with ANSI colors if not Azure-only mode and colors enabled
+		if !*azureOnly {
+			if *noColor {
+				fmt.Printf("[INFO] [SUBDOMAIN:%s] [CNAME:%s] [STATUS:%s]\n",
+					subdomain, cname, status)
+			} else {
+				fmt.Printf("%s[INFO]%s [SUBDOMAIN:%s%s%s] [CNAME:%s%s%s] [STATUS:%s%s%s]\n",
+					Blue, NC, Blue, subdomain, NC, Blue, cname, NC, Green, status, NC)
+			}
+		}
 	}
 }
 
@@ -90,14 +110,10 @@ func getStatus(subdomain string) (string, error) {
 
 // function that check for subdomain takeover in azure services
 func azureSTO(cname string, status string) bool {
-	azureRegex := regexp.MustCompile(`(?i)^(?:[a-z0-9-]+\.)?(?:cloudapp\.net|azurewebsites\.net|cloudapp\.azure\.com)$`)
+	azureRegex := regexp.MustCompile(`(?i)^(?:[a-z0-9-]+\.)?(?:cloudapp\.net|azurewebsites\.net|cloudapp\.azure\.com|trafficmanager\.net)$`)
 
 	if strings.Contains(status, "NXDOMAIN") && azureRegex.MatchString(cname) {
-		url := fmt.Sprintf("https://%s", cname)
-		_, err := http.Get(url)
-		if err != nil {
-			return true
-		}
+		return true
 	}
 	return false
 }
