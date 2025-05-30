@@ -1,6 +1,6 @@
 # SubOv88r
 
-A simple Go tool for analyzing subdomains for subdomain takeover vulnerability, especially in Azure services.
+A simple Go tool for analyzing subdomains for subdomain takeover vulnerability, especially in Azure and AWS services.
 
 ## Features
 - Checks CNAME records for Azure-related domains (e.g., cloudapp.net, azurewebsites.net, cloudapp.azure.com, trafficmanager.net)
